@@ -1,0 +1,48 @@
+name: fraudguard CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint with flake8
+        run: flake8 fraudguard/ tests/ --max-line-length=100
+
+      - name: Type check with mypy
+        run: mypy fraudguard/ --ignore-missing-imports
+
+      - name: Train model
+        run: python -m fraudguard.ml.model_trainer
+
+      - name: Run unit tests
+        run: pytest tests/unit/ -v --cov=fraudguard --cov-report=xml
+        env:
+          JWT_SECRET: test-secret-key
+
+      - name: Run integration tests
+        run: pytest tests/integration/ -v
+        env:
+          JWT_SECRET: test-secret-key
+
+      - name: Run non-regression tests
+        run: pytest tests/non_regression/ -v
+
+      - name: Fail if coverage below 90%
+        run: pytest tests/ --cov=fraudguard --cov-fail-under=90
+        env:
+          JWT_SECRET: test-secret-key
+
+      - name: Build Docker image
+        run: docker build -t fraudguard:${{ github.sha }} -f docker/Dockerfile .
