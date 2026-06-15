@@ -63,3 +63,7 @@ docker-compose.override.yml
 # Logs
 *.log
 logs/
+
+# Allure
+allure-results/
+allure-report/
